@@ -5,16 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Period;
 use Illuminate\Http\Request;
 
+
 class PeriodController extends Controller
 {
     // Ambil semua periode
     public function index()
     {
-        $periods = Period::where('is_active', true)
-            ->orderBy('time_start')
-            ->get();
+    $periods = Period::orderBy('time_start')->get();
 
-        return response()->json($periods);
+    return response()->json($periods);
     }
 
     // Tambah periode (admin only)
@@ -24,13 +23,14 @@ class PeriodController extends Controller
             'name'       => 'required|string|max:100',
             'time_start' => 'required|date_format:H:i',
             'time_end'   => 'required|date_format:H:i|after:time_start',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $period = Period::create([
             'name'       => $request->name,
             'time_start' => $request->time_start . ':00',
             'time_end'   => $request->time_end . ':00',
-            'is_active'  => true,
+            'is_active' => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -69,10 +69,10 @@ class PeriodController extends Controller
     // Hapus periode (admin only)
     public function destroy(Period $period)
     {
-        $period->update(['is_active' => false]);
+        $period->delete();
 
         return response()->json([
-            'message' => 'Periode berhasil dinonaktifkan.',
+            'message' => 'Periode berhasil dihapus.',
         ]);
     }
 }

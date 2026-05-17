@@ -70,9 +70,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // Location management
         Route::post('/location-types',                      [LocationController::class, 'storeType']);
         Route::patch('/location-types/{locationType}',      [LocationController::class, 'updateType']);
+        Route::delete('/location-types/{locationType}',[LocationController::class, 'destroyType']);
+
         Route::post('/locations',                           [LocationController::class, 'store']);
         Route::patch('/locations/{locationName}',           [LocationController::class, 'update']);
-
+        Route::delete('/locations/{locationName}',          [LocationController::class, 'destroy']);
+    
         // Master Jobs management
         Route::post('/master-jobs',             [MasterJobController::class, 'store']);
         Route::patch('/master-jobs/{masterJob}',[MasterJobController::class, 'update']);

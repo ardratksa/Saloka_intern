@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Period extends Model
 {
-    use LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'name',

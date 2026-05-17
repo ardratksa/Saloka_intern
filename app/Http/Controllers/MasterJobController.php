@@ -10,8 +10,7 @@ class MasterJobController extends Controller
     // Ambil semua job, bisa filter by location_type_id
     public function index(Request $request)
     {
-        $query = MasterJob::with('locationType')
-            ->where('is_active', true);
+        $query = MasterJob::with('locationType');
 
         if ($request->filled('location_type_id')) {
             $query->where('location_type_id', $request->location_type_id);
@@ -37,6 +36,7 @@ class MasterJobController extends Controller
             'location_type_id' => 'required|exists:location_types,id',
             'job'              => 'required|string|max:255',
             'order'            => 'nullable|integer',
+            'is_active'        => 'nullable|boolean',
         ]);
 
         // Auto order kalau tidak diisi
@@ -47,7 +47,7 @@ class MasterJobController extends Controller
             'location_type_id' => $request->location_type_id,
             'job'              => $request->job,
             'order'            => $request->order ?? $maxOrder + 1,
-            'is_active'        => true,
+            'is_active'        => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -78,10 +78,10 @@ class MasterJobController extends Controller
     // Hapus job (admin only)
     public function destroy(MasterJob $masterJob)
     {
-        $masterJob->update(['is_active' => false]);
+        $masterJob->delete();
 
         return response()->json([
-            'message' => 'Job berhasil dinonaktifkan.',
+            'message' => 'Job berhasil dihapus.',
         ]);
     }
 }

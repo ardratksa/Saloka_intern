@@ -17,11 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
-
-        // ❌ HAPUS INI (penyebab CSRF mismatch)
-        // $middleware->statefulApi();
-
-        // ✅ TAMBAHKAN INI (biar API tidak pakai CSRF)
         $middleware->validateCsrfTokens(except: [
             'api/*',
         ]);

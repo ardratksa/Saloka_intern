@@ -12,9 +12,7 @@ class LocationController extends Controller
     // Ambil semua tipe lokasi
     public function types()
     {
-        $types = LocationType::where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $types = LocationType::orderBy('name')->get();
 
         return response()->json($types);
     }
@@ -22,8 +20,7 @@ class LocationController extends Controller
     // Ambil semua lokasi, bisa filter by type
     public function index(Request $request)
     {
-        $query = LocationName::with('type')
-            ->where('is_active', true);
+        $query = LocationName::with('type');
 
         if ($request->filled('location_type_id')) {
             $query->where('location_type_id', $request->location_type_id);
@@ -63,13 +60,14 @@ class LocationController extends Controller
         $request->validate([
             'location_type_id' => 'required|exists:location_types,id',
             'name'             => 'required|string|max:100',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $location = LocationName::create([
             'location_type_id' => $request->location_type_id,
             'name'             => $request->name,
             'qr_code'          => (string) Str::uuid(),
-            'is_active'        => true,
+            'is_active' => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -101,11 +99,12 @@ class LocationController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:100|unique:location_types,name',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $type = LocationType::create([
             'name'      => $request->name,
-            'is_active' => true,
+            'is_active' => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -129,6 +128,26 @@ class LocationController extends Controller
         return response()->json([
             'message' => 'Tipe lokasi berhasil diperbarui.',
             'type'    => $locationType,
+        ]);
+    }
+    
+        // Hapus lokasi (admin only)
+    public function destroy(LocationName $locationName)
+    {
+        $locationName->delete();
+
+        return response()->json([
+            'message' => 'Lokasi berhasil dihapus.',
+        ]);
+    }
+
+    // Hapus tipe lokasi (admin only)
+    public function destroyType(LocationType $locationType)
+    {
+        $locationType->delete();
+        
+        return response()->json([
+            'message' => 'Tipe lokasi berhasil dihapus.',
         ]);
     }
 }

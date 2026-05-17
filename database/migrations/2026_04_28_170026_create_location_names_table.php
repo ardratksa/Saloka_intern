@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('qr_code')->unique()->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
