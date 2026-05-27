@@ -31,7 +31,7 @@ class LocationController extends Controller
                 'id'        => $l->id,
                 'name'      => $l->name,
                 'type_id'   => $l->location_type_id,
-                'type_name' => $l->type->name,
+                'type_name' => $l->type?->name,
                 'qr_code'   => $l->qr_code,
                 'is_active' => $l->is_active,
             ]);
@@ -48,7 +48,7 @@ class LocationController extends Controller
             'id'        => $locationName->id,
             'name'      => $locationName->name,
             'type_id'   => $locationName->location_type_id,
-            'type_name' => $locationName->type->name,
+            'type_name' => $locationName->type?->name,
             'qr_code'   => $locationName->qr_code,
             'is_active' => $locationName->is_active,
         ]);
@@ -63,11 +63,21 @@ class LocationController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
+        $date = now()->format('ymd');
+
+        $lastId = (LocationName::max('id') ?? 0) + 1;
+
+        $sequence = str_pad($lastId, 4, '0', STR_PAD_LEFT);
+
+        $random = strtolower(Str::random(5));
+
+        $qrCode = "{$request->location_type_id}-{$date}-{$sequence}-{$random}";
+
         $location = LocationName::create([
             'location_type_id' => $request->location_type_id,
             'name'             => $request->name,
-            'qr_code'          => (string) Str::uuid(),
-            'is_active' => $request->is_active ?? true,
+            'qr_code'          => $qrCode,
+            'is_active'        => $request->is_active ?? true,
         ]);
 
         return response()->json([
