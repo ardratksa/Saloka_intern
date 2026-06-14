@@ -5,15 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\Period;
 use Illuminate\Http\Request;
 
-
 class PeriodController extends Controller
 {
     // Ambil semua periode
     public function index()
     {
-    $periods = Period::orderBy('time_start')->get();
+        $periods = Period::orderBy('time_start')->get();
 
-    return response()->json($periods);
+        return response()->json($periods);
+    }
+
+    public function active()
+    {
+        $now = now()->format('H:i:s');
+
+        $period = Period::where('is_active', true)
+            ->where('time_start', '<=', $now)
+            ->where('time_end', '>=', $now)
+            ->first();
+
+        if (!$period) {
+            return response()->json([
+                'message' => 'Tidak ada periode aktif'
+            ], 404);
+        }
+
+        return response()->json($period);
     }
 
     // Tambah periode (admin only)
@@ -23,14 +40,14 @@ class PeriodController extends Controller
             'name'       => 'required|string|max:100',
             'time_start' => 'required|date_format:H:i',
             'time_end'   => 'required|date_format:H:i|after:time_start',
-            'is_active' => 'nullable|boolean',
+            'is_active'  => 'nullable|boolean',
         ]);
 
         $period = Period::create([
             'name'       => $request->name,
             'time_start' => $request->time_start . ':00',
             'time_end'   => $request->time_end . ':00',
-            'is_active' => $request->is_active ?? true,
+            'is_active'  => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -54,6 +71,7 @@ class PeriodController extends Controller
         if ($request->filled('time_start')) {
             $data['time_start'] = $request->time_start . ':00';
         }
+
         if ($request->filled('time_end')) {
             $data['time_end'] = $request->time_end . ':00';
         }

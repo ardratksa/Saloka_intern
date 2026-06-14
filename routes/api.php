@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Periods
     Route::get('/periods', [PeriodController::class, 'index']);
+    Route::get('/periods/active', [PeriodController::class, 'active']);
 
     // Checklist
     Route::get('/checklist',             [ChecklistController::class, 'index']);
