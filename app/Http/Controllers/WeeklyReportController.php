@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Checklist;
 use App\Models\Issue;
-use App\Models\LocationName;
-use App\Models\Period;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class WeeklyReportController extends Controller
@@ -13,111 +12,188 @@ class WeeklyReportController extends Controller
     public function index(Request $request)
     {
         $request->validate([
-            'week_start' => 'required|date',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
         ]);
 
-        $weekStart = $request->week_start;
-        $weekEnd   = date('Y-m-d', strtotime($weekStart . ' +6 days'));
+        $start = Carbon::parse(
+            $request->start_date
+        )->startOfDay();
 
-        $checklists = Checklist::with(['location.type', 'period'])
-            ->whereBetween('date', [$weekStart, $weekEnd])
-            ->get();
+        $end = Carbon::parse(
+            $request->end_date
+        )->endOfDay();
 
-        // Progress per hari
-        $dailyProgress = [];
-        for ($i = 0; $i < 7; $i++) {
-            $day  = date('Y-m-d', strtotime($weekStart . " +{$i} days"));
-            $dayC = $checklists->where('date', $day);
-            $tot  = $dayC->count();
-            $done = $dayC->where('status', 'done')->count();
+        /*
+        |--------------------------------------------------------------------------
+        | CHECKLIST
+        |--------------------------------------------------------------------------
+        */
 
-            $dailyProgress[$day] = [
-                'total' => $tot,
-                'done'  => $done,
-                'pct'   => $tot > 0
-                    ? (int) round(($done / $tot) * 100)
-                    : 0,
-            ];
-        }
+        $checklists = Checklist::with([
+            'location.type',
+            'period',
+            'user',
+            'documentations',
+        ])
+        ->whereBetween('date', [
+            $start->toDateString(),
+            $end->toDateString(),
+        ])
+        ->orderByDesc('date')
+        ->get();
 
-        // Progress per periode
-        $periods        = Period::where('is_active', true)->get();
-        $periodProgress = $periods->map(function ($period) use ($checklists) {
-            $pc   = $checklists->where('periode_id', $period->id);
-            $tot  = $pc->count();
-            $done = $pc->where('status', 'done')->count();
+        /*
+        |--------------------------------------------------------------------------
+        | ISSUE
+        |--------------------------------------------------------------------------
+        */
+
+        $issues = Issue::with([
+            'location',
+            'user',
+            'documentations',
+        ])
+        ->whereBetween('date', [
+            $start->toDateString(),
+            $end->toDateString(),
+        ])
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(function ($issue) {
 
             return [
-                'period_id'   => $period->id,
-                'period_name' => $period->name,
-                'time_start'  => $period->time_start,
-                'time_end'    => $period->time_end,
-                'total'       => $tot,
-                'done'        => $done,
-                'pct'         => $tot > 0
-                    ? (int) round(($done / $tot) * 100)
-                    : 0,
+
+                'id' =>
+                    $issue->id,
+
+                'type' =>
+                    $issue->type,
+
+                'description' =>
+                    $issue->description,
+
+                'location' =>
+                    $issue->location?->name,
+
+                'reported_by' =>
+                    $issue->user?->name,
+
+                'date' =>
+                    $issue->date?->toDateString(),
+
+                'status' =>
+                    $issue->status,
+
+                'created_at' =>
+                    $issue->created_at
+                        ->format('Y-m-d H:i'),
+
+                'photos' =>
+                    $issue->documentations
+                        ->map(function ($doc) {
+
+                            return [
+
+                                'id' =>
+                                    $doc->id,
+
+                                'image_url' =>
+                                    asset(
+                                        'storage/' .
+                                        $doc->image
+                                    ),
+
+                                'note' =>
+                                    $doc->note,
+                            ];
+                        })
+                        ->values(),
             ];
         });
 
-        // Progress per lokasi
-        $locations        = LocationName::with('type')
-            ->where('is_active', true)
-            ->get();
-        $locationProgress = $locations->map(function ($loc) use ($checklists) {
-            $lc   = $checklists->where('location_id', $loc->id);
-            $tot  = $lc->count();
-            $done = $lc->where('status', 'done')->count();
-            $iss  = $lc->where('status', 'issue')->count();
+        /*
+        |--------------------------------------------------------------------------
+        | SUMMARY
+        |--------------------------------------------------------------------------
+        */
 
-            return [
-                'location_id'   => $loc->id,
-                'location_name' => $loc->name,
-                'type'          => $loc->type->name,
-                'total'         => $tot,
-                'done'          => $done,
-                'issue'         => $iss,
-                'pct'           => $tot > 0
-                    ? (int) round(($done / $tot) * 100)
-                    : 0,
-            ];
-        })->filter(fn($l) => $l['total'] > 0)->values();
+        $totalChecklist =
+            $checklists->count();
 
-        // Issues minggu ini
-        $issues = Issue::with(['location', 'user'])
-            ->whereBetween('date', [$weekStart, $weekEnd])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($i) => [
-                'id'          => $i->id,
-                'type'        => $i->type,
-                'description' => $i->description,
-                'location'    => $i->location?->name,
-                'reported_by' => $i->user?->name,
-                'date'        => $i->date?->toDateString(),
-                'status'      => $i->status,
-                'created_at'  => $i->created_at->format('Y-m-d H:i'),
-            ]);
+        $doneChecklist =
+            $checklists
+                ->where('status', 'done')
+                ->count();
 
-        // Summary total
-        $totalItems = $checklists->count();
-        $doneItems  = $checklists->where('status', 'done')->count();
+        $issueCount =
+            $issues->count();
 
         return response()->json([
-            'week_start'        => $weekStart,
-            'week_end'          => $weekEnd,
-            'summary'           => [
-                'total'   => $totalItems,
-                'done'    => $doneItems,
-                'pct'     => $totalItems > 0
-                    ? (int) round(($doneItems / $totalItems) * 100)
-                    : 0,
-                'issues'  => $issues->count(),
+
+            'start_date' =>
+                $start->toDateString(),
+
+            'end_date' =>
+                $end->toDateString(),
+
+            'summary' => [
+
+                'total' =>
+                    $totalChecklist,
+
+                'done' =>
+                    $doneChecklist,
+
+                'pct' =>
+                    $totalChecklist > 0
+                        ? round(
+                            ($doneChecklist / $totalChecklist) * 100,
+                            2
+                        )
+                        : 0,
+
+                'issues' =>
+                    $issueCount,
             ],
-            'daily_progress'    => $dailyProgress,
-            'period_progress'   => $periodProgress,
-            'location_progress' => $locationProgress,
-            'issues'            => $issues,
+
+            'checklists' =>
+
+                $checklists->map(function ($c) {
+
+                    return [
+
+                        'id' =>
+                            $c->id,
+
+                        'date' =>
+                            $c->date?->toDateString(),
+
+                        'location' =>
+                            $c->location?->name,
+
+                        'location_type' =>
+                            $c->location?->type?->name,
+
+                        'period' =>
+                            $c->period?->name,
+
+                        'pic' =>
+                            $c->user?->name,
+
+                        'status' =>
+                            $c->status,
+
+                        'note' =>
+                            $c->note,
+
+                        'total_docs' =>
+                            $c->documentations->count(),
+                    ];
+                }),
+
+            'issues' =>
+                $issues,
         ]);
     }
 }

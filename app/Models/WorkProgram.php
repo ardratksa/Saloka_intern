@@ -73,6 +73,9 @@ class WorkProgram extends Model
 
     public function evidences()
     {
-        return $this->hasMany(WorkProgramEvidence::class);
+        return $this->hasMany(
+            WorkProgramEvidence::class,
+            'work_program_id'
+        );
     }
 }

@@ -9,6 +9,8 @@ class WorkProgramEvidence extends Model
 {
     use HasFactory;
 
+    protected $table = 'work_program_evidences';
+
     protected $fillable = [
 
         'work_program_id',
@@ -22,18 +24,13 @@ class WorkProgramEvidence extends Model
     ];
 
     protected $casts = [
-
         'date' => 'date',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONS
-    |--------------------------------------------------------------------------
-    */
-
     public function workProgram()
     {
-        return $this->belongsTo(WorkProgram::class);
+        return $this->belongsTo(
+            WorkProgram::class
+        );
     }
 }

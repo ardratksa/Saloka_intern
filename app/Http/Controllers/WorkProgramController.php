@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\WorkProgram;
+use App\Models\WorkProgramEvidence;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 
 class WorkProgramController extends Controller
@@ -150,7 +152,7 @@ class WorkProgramController extends Controller
 
             'scheduled_dates' => 'nullable|array',
 
-            'status' => 'nullable|in:pending,done',
+            'status' => 'nullable|in:pending,done,late',
 
             'checker' => 'nullable|string',
 
@@ -175,6 +177,82 @@ class WorkProgramController extends Controller
         return response()->json([
             'message' => 'Program kerja berhasil diupdate',
             'data' => $workProgram,
+        ]);
+    }
+
+    public function uploadEvidence(
+        Request $request,
+        WorkProgram $workProgram
+    ) {
+        $request->validate([
+            'before_image' => 'nullable|image|max:5120',
+            'after_image' => 'required|image|max:5120',
+            'remark' => 'nullable|string',
+        ]);
+
+        $beforePath = null;
+
+        if ($request->hasFile('before_image')) {
+            $beforePath = $request
+                ->file('before_image')
+                ->store(
+                    'work-programs/before',
+                    'public'
+                );
+        }
+
+        $afterPath = $request
+            ->file('after_image')
+            ->store(
+                'work-programs/after',
+                'public'
+            );
+
+        $status = 'done';
+
+        if ($workProgram->time_range) {
+
+            $parts = explode(
+                '-',
+                $workProgram->time_range
+            );
+
+            if (count($parts) === 2) {
+
+                $endTime = trim($parts[1]);
+
+                $deadline = now()
+                    ->setTimeFromTimeString(
+                        $endTime
+                    )
+                    ->addMinutes(30);
+
+                if (now()->gt($deadline)) {
+                    $status = 'late';
+                }
+            }
+        }
+
+        WorkProgramEvidence::create([
+            'work_program_id' => $workProgram->id,
+
+            'before_image' => $beforePath,
+
+            'after_image' => $afterPath,
+
+            'remark' => $request->remark,
+
+            'date' => now(),
+        ]);
+
+        $workProgram->update([
+            'status' => $status,
+            'has_evidence' => true,
+            'completed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Bukti pekerjaan berhasil disimpan',
         ]);
     }
 

@@ -7,6 +7,8 @@ use App\Models\Checklist;
 use App\Models\MasterJob;
 use App\Models\LocationName;
 use App\Models\Issue;
+use App\Models\ChecklistDocumentation;
+use Illuminate\Support\Facades\Storage;
 
 class ChecklistController extends Controller
 {
@@ -127,6 +129,53 @@ class ChecklistController extends Controller
         return response()->json([
             'message' => 'Checklist berhasil disimpan',
             'data'    => $checklist,
+        ]);
+    }
+
+    /**
+ * POST /checklist/upload-doc
+ */
+    public function uploadDoc(Request $request)
+    {
+        $request->validate([
+            'checklist_id' => 'required|exists:checklists,id',
+            'image' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'note' => 'nullable|string',
+        ]);
+
+        $path = $request->file('image')
+            ->store('checklist-docs', 'public');
+
+        $doc = ChecklistDocumentation::create([
+            'checklist_id' => $request->checklist_id,
+            'image' => $path,
+            'note' => $request->note,
+        ]);
+
+        return response()->json([
+            'message' => 'Dokumentasi berhasil diupload',
+            'data' => [
+                'id' => $doc->id,
+                'image_url' => asset('storage/' . $path),
+                'note' => $doc->note,
+            ],
+        ], 201);
+    }
+
+    /**
+     * DELETE /checklist/doc/{checklistDocumentation}
+     */
+    public function deleteDoc(
+        ChecklistDocumentation $checklistDocumentation
+    ) {
+        Storage::disk('public')->delete(
+            $checklistDocumentation->image
+        );
+
+        $checklistDocumentation->delete();
+
+        return response()->json([
+            'message' => 'Dokumentasi berhasil dihapus',
         ]);
     }
 

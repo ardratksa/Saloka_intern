@@ -6,11 +6,13 @@ use App\Http\Controllers\IssueController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MasterJobController;
 use App\Http\Controllers\PeriodController;
+use App\Http\Controllers\MasterIssueController;
 use App\Http\Controllers\ScReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyReportController;
 use App\Http\Controllers\WorkPlanController;
 use App\Http\Controllers\WorkProgramController;
+use App\Http\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public ──────────────────────────────────────────────────
@@ -36,6 +38,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/periods', [PeriodController::class, 'index']);
     Route::get('/periods/active', [PeriodController::class, 'active']);
 
+    // Master Issues
+    Route::get(
+        '/master-issues',
+        [MasterIssueController::class, 'index']
+    );
+
     // Checklist
     Route::get('/checklist',             [ChecklistController::class, 'index']);
     Route::post('/checklist/update',     [ChecklistController::class, 'update']);
@@ -59,6 +67,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch(
         '/issues/{issue}/status',
         [IssueController::class, 'updateStatus']
+    );
+
+    Route::post(
+        '/issues/{issue}/close',
+        [IssueController::class, 'close']
     );
 
     Route::post(
@@ -115,6 +128,11 @@ Route::middleware('auth:sanctum')->group(function () {
         [WorkProgramController::class, 'update']
     );
 
+    Route::post(
+        '/work-programs/{workProgram}/evidence',
+        [WorkProgramController::class, 'uploadEvidence']
+    );
+
     Route::delete(
         '/work-programs/{workProgram}',
         [WorkProgramController::class, 'destroy']
@@ -122,6 +140,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Weekly Report
     Route::get('/weekly-report', [WeeklyReportController::class, 'index']);
+
+    // Export Report
+    Route::get('/report/export',[ReportExportController::class, 'cleaning']);
 
     // ─── Admin only ───────────────────────────────────────────
     Route::middleware('role:admin')->group(function () {
@@ -171,6 +192,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete(
             '/master-jobs/{masterJob}',
             [MasterJobController::class, 'destroy']
+        );
+
+        // Master Issue management
+
+        Route::post(
+            '/master-issues',
+            [MasterIssueController::class, 'store']
+        );
+
+        Route::patch(
+            '/master-issues/{masterIssue}',
+            [MasterIssueController::class, 'update']
+        );
+
+        Route::delete(
+            '/master-issues/{masterIssue}',
+            [MasterIssueController::class, 'destroy']
         );
 
         // Period management

@@ -92,7 +92,7 @@ class IssueController extends Controller
     public function updateStatus(Request $request, Issue $issue)
     {
         $request->validate([
-            'status' => 'required|in:open,in_progress,resolved',
+            'status' => 'required|in:open,resolved',
         ]);
 
         $issue->update(['status' => $request->status]);
@@ -102,6 +102,35 @@ class IssueController extends Controller
             'issue'   => $this->formatIssue(
                 $issue->load(['location', 'user'])
             ),
+        ]);
+    }
+
+    public function close(
+        Request $request,
+        Issue $issue
+    )
+    {
+        $request->validate([
+            'note' => 'required|string',
+            'image' => 'required|image|max:5120',
+        ]);
+
+        $path = $request
+            ->file('image')
+            ->store('issue-docs', 'public');
+
+        IssueDocumentation::create([
+            'issue_id' => $issue->id,
+            'image' => $path,
+            'note' => $request->note,
+        ]);
+
+        $issue->update([
+            'status' => 'resolved',
+        ]);
+
+        return response()->json([
+            'message' => 'Issue berhasil diselesaikan'
         ]);
     }
 
@@ -158,7 +187,7 @@ class IssueController extends Controller
             'created_at'   => $issue->created_at->format('Y-m-d H:i'),
             'photos'       => $issue->documentations->map(fn($d) => [
                 'id'        => $d->id,
-                'image_url' => asset('storage/' . $d->image),
+                'image_url' => config('app.url') . '/storage/' . $d->image,
                 'note'      => $d->note,
             ]),
         ];
