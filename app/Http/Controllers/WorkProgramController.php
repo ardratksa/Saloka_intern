@@ -49,6 +49,41 @@ class WorkProgramController extends Controller
         |--------------------------------------------------------------------------
         */
 
+        WorkProgram::where(
+            'status',
+            'pending'
+        )
+        ->get()
+        ->each(function ($item) {
+
+            if (!$item->time_range) {
+                return;
+            }
+
+            $parts =
+                explode(
+                    '-',
+                    $item->time_range
+                );
+
+            if (count($parts) !== 2) {
+                return;
+            }
+
+            $deadline =
+                trim($parts[1]);
+
+            if (
+                now()->format('H:i')
+                > $deadline
+            ) {
+
+                $item->update([
+                    'status' => 'late'
+                ]);
+            }
+        });
+
         $programs = $query
             ->latest()
             ->get();

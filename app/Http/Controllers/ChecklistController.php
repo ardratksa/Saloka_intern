@@ -220,10 +220,21 @@ class ChecklistController extends Controller
 
                 $status = 'Tidak OK';
 
-                if ($score >= 80) {
+                $hasOpenIssue = Issue::whereIn(
+                    'checklist_id',
+                    $items->pluck('id')
+                )
+                ->where('status', 'open')
+                ->exists();
+
+                $score = $total > 0
+                    ? round(($done / $total) * 100)
+                    : 0;
+
+                $status = 'Tidak OK';
+
+                if (!$hasOpenIssue && $score === 100) {
                     $status = 'OK';
-                } elseif ($score >= 60) {
-                    $status = 'Perlu Perbaikan';
                 }
 
                 return [
@@ -273,10 +284,6 @@ class ChecklistController extends Controller
             ->where('status', 'OK')
             ->count();
 
-        $perbaikan = $sessions
-            ->where('status', 'Perlu Perbaikan')
-            ->count();
-
         $tidakOk = $sessions
             ->where('status', 'Tidak OK')
             ->count();
@@ -292,7 +299,6 @@ class ChecklistController extends Controller
             'summary' => [
                 'total' => $totalSessions,
                 'ok' => $okCount,
-                'perbaikan' => $perbaikan,
                 'tidak_ok' => $tidakOk,
                 'avg_score' => $avgScore,
             ],

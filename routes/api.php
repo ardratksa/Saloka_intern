@@ -12,7 +12,9 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyReportController;
 use App\Http\Controllers\WorkPlanController;
 use App\Http\Controllers\WorkProgramController;
+use App\Http\Controllers\WorkProgramReportController;
 use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\DashboardExportController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public ──────────────────────────────────────────────────
@@ -138,11 +140,19 @@ Route::middleware('auth:sanctum')->group(function () {
         [WorkProgramController::class, 'destroy']
     );
 
+    Route::get(
+        '/work-program-report',
+        [WorkProgramReportController::class, 'index']
+    );
+
     // Weekly Report
     Route::get('/weekly-report', [WeeklyReportController::class, 'index']);
 
     // Export Report
     Route::get('/report/export',[ReportExportController::class, 'cleaning']);
+
+    // Dashboard Export
+    Route::get('/dashboard/export',[DashboardExportController::class, 'export']);
 
     // ─── Admin only ───────────────────────────────────────────
     Route::middleware('role:admin')->group(function () {
