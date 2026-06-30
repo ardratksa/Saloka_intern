@@ -9,6 +9,7 @@ class IssueDocumentation extends Model
     protected $fillable = [
         'issue_id',
         'image',
+        'type',
         'note',
     ];
 

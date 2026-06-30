@@ -187,8 +187,25 @@ class WeeklyReportController extends Controller
                         'note' =>
                             $c->note,
 
-                        'total_docs' =>
-                            $c->documentations->count(),
+                        'total_docs' => $c->documentations->count(),
+
+                        'photos' => $c->documentations
+                            ->map(function ($doc) {
+
+                                return [
+
+                                    'id' => $doc->id,
+
+                                    'image_url' => asset(
+                                        'storage/' . $doc->image
+                                    ),
+
+                                    'note' => $doc->note,
+
+                                ];
+
+                            })
+                            ->values(),
                     ];
                 }),
 

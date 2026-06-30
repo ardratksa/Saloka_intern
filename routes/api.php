@@ -131,8 +131,13 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::post(
-        '/work-programs/{workProgram}/evidence',
-        [WorkProgramController::class, 'uploadEvidence']
+        '/work-programs/{workProgram}/before',
+        [WorkProgramController::class,'uploadBefore']
+    );
+
+    Route::post(
+        '/work-programs/{workProgram}/after',
+        [WorkProgramController::class,'uploadAfter']
     );
 
     Route::delete(

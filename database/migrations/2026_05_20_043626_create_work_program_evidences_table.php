@@ -17,13 +17,16 @@ return new class extends Migration
                   ->cascadeOnDelete();
 
             $table->string('before_image')
-                  ->nullable();
+                ->nullable();
+
+            $table->text('before_remark')
+                ->nullable();
 
             $table->string('after_image')
-                  ->nullable();
+                ->nullable();
 
-            $table->text('remark')
-                  ->nullable();
+            $table->text('after_remark')
+                ->nullable();
 
             $table->date('date');
 

@@ -62,8 +62,11 @@ class WorkProgramReportController extends Controller
                                     ? asset('storage/' . $evidence->after_image)
                                     : null,
 
-                            'remark' =>
-                                $evidence->remark,
+                            'before_remark' =>
+                                $evidence->before_remark,
+
+                            'after_remark' =>
+                                $evidence->after_remark,
 
                             'date' =>
                                 $evidence->date,

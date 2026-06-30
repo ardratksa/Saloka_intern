@@ -18,7 +18,8 @@ class WorkProgramController extends Controller
     public function index(Request $request)
     {
         $query = WorkProgram::with([
-            'job'
+             'job',
+             'evidences',
         ]);;
 
         /*
@@ -49,45 +50,28 @@ class WorkProgramController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        WorkProgram::where(
-            'status',
-            'pending'
-        )
-        ->get()
-        ->each(function ($item) {
-
-            if (!$item->time_range) {
-                return;
-            }
-
-            $parts =
-                explode(
-                    '-',
-                    $item->time_range
-                );
-
-            if (count($parts) !== 2) {
-                return;
-            }
-
-            $deadline =
-                trim($parts[1]);
-
-            if (
-                now()->format('H:i')
-                > $deadline
-            ) {
-
-                $item->update([
-                    'status' => 'late'
-                ]);
-            }
-        });
-
         $programs = $query
             ->latest()
-            ->get();
+            ->get()
+            ->map(function ($program) {
 
+                $program->evidences->transform(function ($evidence) {
+
+                    if ($evidence->before_image) {
+                        $evidence->before_image =
+                            asset('storage/' . $evidence->before_image);
+                    }
+
+                    if ($evidence->after_image) {
+                        $evidence->after_image =
+                            asset('storage/' . $evidence->after_image);
+                    }
+
+                    return $evidence;
+                });
+
+                return $program;
+            });
         return response()->json([
             'success' => true,
             'data' => $programs
@@ -187,7 +171,7 @@ class WorkProgramController extends Controller
 
             'scheduled_dates' => 'nullable|array',
 
-            'status' => 'nullable|in:pending,done,late',
+            'status' => 'nullable|in:pending,progress,done,late',
 
             'checker' => 'nullable|string',
 
@@ -215,79 +199,128 @@ class WorkProgramController extends Controller
         ]);
     }
 
-    public function uploadEvidence(
+    public function uploadBefore(
         Request $request,
         WorkProgram $workProgram
-    ) {
+    )
+    {
         $request->validate([
-            'before_image' => 'nullable|image|max:5120',
-            'after_image' => 'required|image|max:5120',
-            'remark' => 'nullable|string',
+
+            'image' => 'required|image|max:5120',
+
+            'remark' => 'required|string',
+
         ]);
 
-        $beforePath = null;
-
-        if ($request->hasFile('before_image')) {
-            $beforePath = $request
-                ->file('before_image')
-                ->store(
-                    'work-programs/before',
-                    'public'
-                );
-        }
-
-        $afterPath = $request
-            ->file('after_image')
+        $path = $request
+            ->file('image')
             ->store(
-                'work-programs/after',
+                'work-programs/before',
                 'public'
             );
 
-        $status = 'done';
+        WorkProgramEvidence::create([
 
-        if ($workProgram->time_range) {
+            'work_program_id' => $workProgram->id,
 
-            $parts = explode(
+            'before_image' => $path,
+
+            'before_remark' => $request->remark,
+
+            'date' => now(),
+
+        ]);
+
+        $workProgram->update([
+
+            'status' => 'progress',
+
+            'has_evidence' => true,
+
+        ]);
+
+        return response()->json([
+
+            'message' => 'Bukti awal berhasil disimpan'
+
+        ]);
+    }
+
+    public function uploadAfter(
+        Request $request,
+        WorkProgram $workProgram
+    )
+    {
+        $request->validate([
+
+            'image'=>'required|image|max:5120',
+
+            'remark'=>'required|string',
+
+            'evidence_id'=>'required|exists:work_program_evidences,id',
+
+        ]);
+
+        $evidence =
+            WorkProgramEvidence::findOrFail(
+                $request->evidence_id
+            );
+
+        $path =
+            $request
+                ->file('image')
+                ->store(
+                    'work-programs/after',
+                    'public'
+                );
+
+        $evidence->update([
+
+            'after_image'=>$path,
+
+            'after_remark'=>$request->remark,
+
+        ]);
+
+        $status='done';
+
+        if($workProgram->time_range){
+
+            $parts=explode(
                 '-',
                 $workProgram->time_range
             );
 
-            if (count($parts) === 2) {
+            if(count($parts)==2){
 
-                $endTime = trim($parts[1]);
-
-                $deadline = now()
+                $deadline=
+                    now()
                     ->setTimeFromTimeString(
-                        $endTime
-                    )
-                    ->addMinutes(30);
+                        trim($parts[1])
+                    );
 
-                if (now()->gt($deadline)) {
-                    $status = 'late';
+                if(now()->gt($deadline)){
+
+                    $status='late';
+
                 }
+
             }
+
         }
 
-        WorkProgramEvidence::create([
-            'work_program_id' => $workProgram->id,
-
-            'before_image' => $beforePath,
-
-            'after_image' => $afterPath,
-
-            'remark' => $request->remark,
-
-            'date' => now(),
-        ]);
-
         $workProgram->update([
-            'status' => $status,
-            'has_evidence' => true,
-            'completed_at' => now(),
+
+            'status'=>$status,
+
+            'completed_at'=>now(),
+
         ]);
 
         return response()->json([
-            'message' => 'Bukti pekerjaan berhasil disimpan',
+
+            'message'=>'Pekerjaan selesai'
+
         ]);
     }
 

@@ -12,7 +12,13 @@ class IssueController extends Controller
     // Ambil semua issue
     public function index(Request $request)
     {
-        $query = Issue::with(['location', 'user', 'documentations']);
+        $query = Issue::with([
+            'location',
+            'user',
+            'documentations',
+            'checklist.job',
+            'checklist.period',
+        ]);
 
         // Staff hanya lihat issue miliknya
         if ($request->user()->isStaff()) {
@@ -51,8 +57,8 @@ class IssueController extends Controller
             'date'         => 'required|date',
             'type'         => 'required|string|max:100',
             'description'  => 'nullable|string',
-            'images'       => 'nullable|array|max:5',
-            'images.*'     => 'image|mimes:jpg,jpeg,png,webp|max:5120',
+
+            'before'       => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $issue = Issue::create([
@@ -67,14 +73,18 @@ class IssueController extends Controller
         ]);
 
         // Upload foto dokumentasi
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('issue-docs', 'public');
-                IssueDocumentation::create([
-                    'issue_id' => $issue->id,
-                    'image'    => $path,
-                ]);
-            }
+        if ($request->hasFile('before')) {
+
+            $path = $request
+                ->file('before')
+                ->store('issue-docs', 'public');
+
+            IssueDocumentation::create([
+                'issue_id' => $issue->id,
+                'image'    => $path,
+                'type'     => 'before',
+            ]);
+
         }
 
         // TODO: Kirim notifikasi WA ke leader (sprint berikutnya)
@@ -121,8 +131,9 @@ class IssueController extends Controller
 
         IssueDocumentation::create([
             'issue_id' => $issue->id,
-            'image' => $path,
-            'note' => $request->note,
+            'image'    => $path,
+            'type'     => 'after',
+            'note'     => $request->note,
         ]);
 
         $issue->update([
@@ -147,6 +158,7 @@ class IssueController extends Controller
         $doc = IssueDocumentation::create([
             'issue_id' => $issue->id,
             'image'    => $path,
+            'type'     => 'after',
             'note'     => $request->note,
         ]);
 
@@ -180,13 +192,17 @@ class IssueController extends Controller
             'description'  => $issue->description,
             'location_id'  => $issue->location_id,
             'location'     => $issue->location?->name,
+            'job_name' => $issue->checklist?->job?->job,
             'reported_by'  => $issue->user?->name,
             'date'         => $issue->date?->toDateString(),
+            'periode_id' => $issue->checklist?->periode_id,
+            'shift' => $issue->checklist?->period?->name,
             'status'       => $issue->status,
             'wa_sent'      => $issue->wa_sent,
             'created_at'   => $issue->created_at->format('Y-m-d H:i'),
-            'photos'       => $issue->documentations->map(fn($d) => [
+           'photos' => $issue->documentations->map(fn($d) => [
                 'id'        => $d->id,
+                'type'      => $d->type,
                 'image_url' => config('app.url') . '/storage/' . $d->image,
                 'note'      => $d->note,
             ]),

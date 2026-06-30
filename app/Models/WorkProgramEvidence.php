@@ -11,14 +11,15 @@ class WorkProgramEvidence extends Model
 
     protected $table = 'work_program_evidences';
 
-    protected $fillable = [
+        protected $fillable = [
 
         'work_program_id',
 
         'before_image',
-        'after_image',
+        'before_remark',
 
-        'remark',
+        'after_image',
+        'after_remark',
 
         'date',
     ];
